@@ -6,16 +6,23 @@ orchestrator/insight agents are currently rule-based/template-based):
 
     python graph.py datasets/raw/sample.csv "predict churn and explain key factors"
 """
+import os
 import sys
 from langgraph.graph import StateGraph, END
 from agents.state import AgentState
 from agents import orchestrator, data_agent, eda_agent, ml_agent, viz_agent, critic_agent, insight_agent
+from agents.orchestrator_llm import plan_tasks_llm
+
+# Set USE_LLM_ORCHESTRATOR=1 (with ANTHROPIC_API_KEY set) to use real LLM planning.
+# Defaults to the rule-based planner so the graph always runs, key or no key.
+USE_LLM_ORCHESTRATOR = os.environ.get("USE_LLM_ORCHESTRATOR", "0") == "1"
 
 
 def build_graph():
     g = StateGraph(AgentState)
 
-    g.add_node("plan", orchestrator.plan_tasks)
+    planner = plan_tasks_llm if USE_LLM_ORCHESTRATOR else orchestrator.plan_tasks
+    g.add_node("plan", planner)
     g.add_node("data_agent", lambda s: orchestrator.advance(data_agent.run(s)))
     g.add_node("eda_agent", lambda s: orchestrator.advance(eda_agent.run(s)))
     g.add_node("ml_agent", lambda s: orchestrator.advance(ml_agent.run(s)))

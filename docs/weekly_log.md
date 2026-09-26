@@ -25,7 +25,38 @@ Keep this updated every week — it becomes ~70% of your final report if you do 
 - Need real datasets downloaded (Telco Churn, UCI Heart Disease, a finance/loan dataset) — placeholder dataset in use for now
 - Need Anthropic/OpenAI API key provisioned for orchestrator + insight agent upgrade
 
-## Week 1
+## Week 1 — Real datasets + Orchestrator LLM upgrade
+- Added 3 real datasets: Telco Customer Churn (7,043 rows), UCI Heart Disease (303 rows),
+  Loan Approval (614 rows) — covers our 3 target domains (e-commerce, healthcare, finance)
+- Ran the full pipeline end-to-end on all 3 and found two real bugs in the ML Agent's
+  target-column detection:
+  1. Naive substring matching picked "ca" out of the word "clinical" (heart disease goal)
+     — fixed with word-boundary regex matching instead of raw substring search
+  2. Picked "Loan_ID" over "Loan_Status" because both share the word "loan" and it took
+     the first match — fixed by scoring ALL columns by word-overlap count and taking the
+     best match, plus explicitly deprioritizing ID-like columns
+- Built `agents/orchestrator_llm.py`: real Claude-based task planning that reasons about
+  the goal + dataset schema, replacing the keyword-matching rule-based planner. Falls back
+  to the rule-based planner automatically if no API key is set or the LLM call fails
+  (validated both paths work)
+- Added a `USE_LLM_ORCHESTRATOR` env var toggle in `graph.py` so we can A/B the two planners
+  — this doubles as the setup for our ablation study later
+- Built `evaluation/baseline_comparison.py`: runs the same goal through our multi-agent
+  pipeline AND a single-prompt LLM baseline, saves both reports for manual scoring
+
+**Decisions made:**
+- Target-column detection stays rule-based (word-overlap + ID exclusion) rather than
+  jumping straight to LLM-based detection — it's fast, free, and now correct on all 3
+  datasets; may revisit if a 4th dataset breaks it
+
+**Open questions for prof:**
+- [fill in based on this week's meeting]
+
+**Blocked on:**
+- Need actual ANTHROPIC_API_KEY provisioned to test the LLM orchestrator for real and
+  run the baseline comparison (currently only fallback path is tested)
+
+## Week 2
 -
 
 ## Week 2
