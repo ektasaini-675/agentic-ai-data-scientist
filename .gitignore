@@ -1,6 +1,8 @@
 venv/
 .venv/
 mingit/
+gh_bin/
+gh.zip
 __pycache__/
 *.pyc
 .env
