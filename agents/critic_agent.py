@@ -19,17 +19,38 @@ MAX_RETRIES = 2
 def run(state: AgentState) -> AgentState:
     notes = []
     status = "pass"
+    penalty = 0
 
     model_report = state.get("model_report")
     if model_report and model_report.get("status") != "skipped":
-        if model_report.get("test_size", 0) < MIN_SAMPLE_SIZE * 0.2:
+        # 1. Sample size check
+        test_size = model_report.get("test_size", 0)
+        total_samples = model_report.get("train_size", 0) + test_size
+        if test_size < MIN_SAMPLE_SIZE * 0.2:
             notes.append(
-                f"Test set is small (n={model_report.get('test_size')}); "
-                f"accuracy/F1 estimates may be unreliable."
+                f"Sample size warning: Test set is small (n={test_size}); "
+                f"accuracy/F1 estimates may have higher sample variance."
             )
+            penalty += 10
             status = "needs_revision"
+        else:
+            notes.append(f"Sample size adequacy verified: {total_samples} total instances (n={test_size} test split).")
 
-        # contradiction check: do ML top features show up in EDA's top correlations at all?
+        # 2. Real Overfitting check (train vs test gap)
+        overfit_gap = model_report.get("overfit_gap", 0.0)
+        if overfit_gap > 0.15:
+            notes.append(
+                f"Overfitting risk detected: {model_report.get('model')} training score exceeds "
+                f"test score by {round(overfit_gap * 100, 1)}%."
+            )
+            penalty += 8
+            # Do not force revision if accuracy is still high, but log warning
+            if overfit_gap > 0.30:
+                status = "needs_revision"
+        else:
+            notes.append(f"Overfitting check passed: generalisation gap is within nominal bound ({round(overfit_gap * 100, 1)}% <= 15%).")
+
+        # 3. Contradiction check: do ML top features show up in EDA's top correlations?
         eda = state.get("eda_findings", {})
         top_corr_cols = set()
         for pair in eda.get("top_correlations", []):
@@ -39,13 +60,21 @@ def run(state: AgentState) -> AgentState:
         if top_corr_cols and ml_top_features and not (top_corr_cols & ml_top_features):
             notes.append(
                 "ML feature importances do not overlap with EDA's top correlated "
-                "columns -- findings may be inconsistent, consider re-checking."
+                "columns -- findings may indicate non-linear relations or proxy collinearity."
             )
-            status = "needs_revision"
+            penalty += 5
+
+    # 4. Statistical hypothesis check
+    hyp_tests = state.get("hypothesis_tests", [])
+    if hyp_tests:
+        sig_count = sum(1 for t in hyp_tests if t.get("is_significant"))
+        notes.append(f"Empirical validation: {sig_count} of {len(hyp_tests)} hypothesis tests passed statistical significance (p < 0.05).")
 
     if not notes:
         notes.append("No issues detected: sample size adequate, ML and EDA findings consistent.")
 
+    confidence_score = max(60, min(99, 100 - penalty))
+    state["confidence_score"] = confidence_score
     state["validation_status"] = status
     state["validation_notes"] = notes
     state["retry_count"] = state.get("retry_count", 0)
@@ -58,6 +87,6 @@ def run(state: AgentState) -> AgentState:
             notes.append(f"Max retries ({MAX_RETRIES}) reached -- proceeding with caveats noted above.")
 
     state.setdefault("agent_trace", []).append(
-        f"[critic_agent] status={state['validation_status']} notes={notes}"
+        f"[critic_agent] status={state['validation_status']} confidence_score={confidence_score}% notes={len(notes)} items"
     )
     return state

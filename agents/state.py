@@ -33,8 +33,15 @@ class AgentState(TypedDict, total=False):
     validation_notes: List[str]
     retry_count: int
 
-    # --- insight agent output ---
+    # --- insight & critic enrichments ---
     final_report: Optional[str]
+    confidence_score: int
+    hypothesis_tests: List[Dict[str, Any]]
+    models_evaluated: List[Dict[str, Any]]
+    recommendations: List[Dict[str, Any]]
+    key_drivers: List[Dict[str, Any]]
+    report_pdf_path: Optional[str]
+    report_html_path: Optional[str]
 
     # --- logging (for your evaluation/report section later) ---
     agent_trace: List[str]

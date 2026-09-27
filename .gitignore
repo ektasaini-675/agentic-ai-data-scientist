@@ -1,4 +1,6 @@
 venv/
+.venv/
+mingit/
 __pycache__/
 *.pyc
 .env
