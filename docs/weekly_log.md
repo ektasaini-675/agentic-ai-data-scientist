@@ -56,8 +56,34 @@ Keep this updated every week — it becomes ~70% of your final report if you do 
 - Need actual ANTHROPIC_API_KEY provisioned to test the LLM orchestrator for real and
   run the baseline comparison (currently only fallback path is tested)
 
-## Week 2
--
+## Week 2 — Advanced EDA, Multi-Model ML Benchmarking & Interactive Dashboard
+- Implemented automated statistical hypothesis testing in `agents/eda_agent.py`:
+  - Two-Sample Welch's t-test for binary target differences across continuous features.
+  - One-Way ANOVA for multi-class target groups.
+  - Chi-Square (χ²) Test of Independence with contingency tables for categorical relationships.
+- Upgraded `agents/ml_agent.py` to evaluate a multi-model candidate pool:
+  - Trains RandomForest, GradientBoosting, and LogisticRegression (with `StandardScaler`).
+  - Evaluates both train score and test score to quantify generalization/overfitting gaps.
+  - Robust handling for categorical targets and pyarrow chunked arrays.
+- Built interactive Streamlit dashboard (`app.py`):
+  - Visualizes real-time LangGraph execution trace and state transitions.
+  - Interactive EDA correlation heatmap and distributions with Plotly & Matplotlib.
+  - Model leaderboard comparison table and feature importance bar charts.
+  - File uploader supporting custom CSV files and preloaded benchmark datasets.
 
-## Week 2
--
+**Decisions made:**
+- Kept model pool to standard scikit-learn estimators to maintain sub-5s interactive execution on CPU without heavy GPU overhead.
+- Implemented fallback handling for all statistical tests to handle zero variance or uniform distributions gracefully.
+
+## Week 3 — Critic Evidence Confidence Scoring, Ablation Evaluation & PDF/HTML Export
+- Implemented quantitative validation and confidence scoring in `agents/critic_agent.py`:
+  - Real overfitting gap detection (flags when train score exceeds test score by > 15%).
+  - Statistical hypothesis verification check (validating that findings meet p < 0.05).
+  - Computed Evidence Confidence Score (0–100%) reflecting sample size, consistency, and generalizability.
+- Implemented executive report generation in `agents/insight_agent.py`:
+  - Actionable business recommendations prioritized by statistical and model impact.
+  - Automated PDF export (`reports/executive_report.pdf` via `fpdf2`) and HTML report (`reports/executive_report.html`).
+- Built architectural ablation study script (`evaluation/ablation_study.py`):
+  - Evaluates Full System (with Critic Agent & retry loop) vs. Ablated System (Critic bypassed).
+  - Produces structured JSON output and markdown reports for the final thesis defense.
+- Updated project documentation and setup scripts to ensure zero-friction local reproduction.
