@@ -1,4 +1,10 @@
 venv/
+.venv/
+mingit/
+gh_bin/
+gh.zip
+.vscode/
+push_to_github.*
 __pycache__/
 *.pyc
 .env
