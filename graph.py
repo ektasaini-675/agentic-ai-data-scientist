@@ -13,9 +13,9 @@ from agents.state import AgentState
 from agents import orchestrator, data_agent, eda_agent, ml_agent, viz_agent, critic_agent, insight_agent
 from agents.orchestrator_llm import plan_tasks_llm
 
-# Set USE_LLM_ORCHESTRATOR=1 (with ANTHROPIC_API_KEY set) to use real LLM planning.
-# Defaults to the rule-based planner so the graph always runs, key or no key.
-USE_LLM_ORCHESTRATOR = os.environ.get("USE_LLM_ORCHESTRATOR", "0") == "1"
+# Set USE_LLM_ORCHESTRATOR=0 to force the rule-based planner.
+# Defaults to 1; plan_tasks_llm automatically falls back to rule-based if no LLM key is available.
+USE_LLM_ORCHESTRATOR = os.environ.get("USE_LLM_ORCHESTRATOR", "1") == "1"
 
 
 def build_graph():

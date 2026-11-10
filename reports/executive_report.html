@@ -12,49 +12,45 @@ h1, h2 { color: #38bdf8; }
 <body>
 <div class="card">
 <h1>Automated Data Science Report</h1>
-<p><strong>Goal:</strong> Predict presence of heart disease based on clinical measurements</p>
+<p><strong>Goal:</strong> predict diagnosis and explain key factors</p>
 <p><strong>Validation Score:</strong> 99%</p>
 </div>
 <div class="card">
 <pre style="white-space: pre-wrap; font-family: inherit;"># Automated Data Analysis Report
 
-**Objective:** Predict presence of heart disease based on clinical measurements
+**Objective:** predict diagnosis and explain key factors
 
 ## Dataset Overview
-- Rows: 303, Columns: 14
-- Found 1 duplicate rows (flagged, not auto-dropped).
+- Rows: 569, Columns: 31
 - No missing values detected.
 
 ## Key Patterns (EDA)
-- oldpeak vs slope: correlation = -0.58
-- slope vs oldpeak: correlation = -0.58
-- target vs exang: correlation = -0.44
-- exang vs target: correlation = -0.44
-- cp vs target: correlation = 0.43
+- mean radius vs mean perimeter: correlation = 1.00
+- mean perimeter vs mean radius: correlation = 1.00
+- worst perimeter vs worst radius: correlation = 0.99
+- worst radius vs worst perimeter: correlation = 0.99
+- mean radius vs mean area: correlation = 0.99
 
 ## Statistical Hypothesis Testing (alpha = 0.05)
-- **Two-Sample Welch's t-test** (age across sex (1 vs 0)): p = 9.4640e-02 [Not Significant]
-- **Two-Sample Welch's t-test** (cp across sex (1 vs 0)): p = 3.7746e-01 [Not Significant]
-- **Two-Sample Welch's t-test** (trestbps across sex (1 vs 0)): p = 3.5135e-01 [Not Significant]
+- **Two-Sample Welch's t-test** (mean radius across target (0 vs 1)): p = 1.6845e-64 [Statistically Significant]
+- **Two-Sample Welch's t-test** (mean texture across target (0 vs 1)): p = 3.0191e-25 [Statistically Significant]
+- **Two-Sample Welch's t-test** (mean perimeter across target (0 vs 1)): p = 1.0231e-66 [Statistically Significant]
+- **Two-Sample Welch's t-test** (mean area across target (0 vs 1)): p = 3.2844e-52 [Statistically Significant]
 
 ## Predictive Modeling
 - Target: target
-- Best Model: RandomForestClassifier
-- Accuracy: 0.852, F1: 0.849
-- Overfitting Gap: 0.131
-
-## Strategic Recommendations
-- **Clinical Metric Prioritization**: Prioritize diagnostic review of top influential biometric measurements in triage workflows. *(Impact: High (Accelerates clinical turnaround))*
-- **Secondary Verification for Borderline Cases**: Ensure cases falling within middle probability quartiles receive dual-practitioner review. *(Impact: High)*
+- Best Model: LogisticRegression
+- Accuracy: 0.982, F1: 0.982
+- Overfitting Gap: 0.007
 
 ## Validation & Reliability Audit (Confidence: 99%)
-- Sample size adequacy verified: 303 total instances (n=61 test split).
-- Overfitting check passed: generalisation gap is within nominal bound (13.1% <= 15%).
-- Empirical validation: 0 of 3 hypothesis tests passed statistical significance (p < 0.05).
+- Sample size adequacy verified: 569 total instances (n=114 test split).
+- Overfitting check passed: generalisation gap is within nominal bound (0.7% <= 15%).
+- Empirical validation: 4 of 4 hypothesis tests passed statistical significance (p < 0.05).
 
 ## Charts Generated
 - reports/charts\correlation_heatmap.png
-- reports/charts\dist_age.png</pre>
+- reports/charts\dist_mean radius.png</pre>
 </div>
 </body>
 </html>

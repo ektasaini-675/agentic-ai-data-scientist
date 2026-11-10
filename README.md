@@ -8,13 +8,16 @@
 
 ## 📌 Project Overview
 An autonomous, verifiable multi-agent data scientist system built on **LangGraph**. Given any raw dataset (CSV) and a natural-language business/analytical goal, the system:
-1. **Orchestrator Agent**: Decomposes the analytical goal into ordered subtasks (supporting both heuristic planning and Claude/LLM planning).
-2. **Data Agent**: Inspects schemas, missing value distributions, cardinalities, and cleans duplicates.
-3. **EDA Agent**: Computes correlation matrices, detects outliers, and executes **statistical hypothesis testing** (Welch's t-test, One-Way ANOVA, Chi-Square $\chi^2$ independence tests).
-4. **ML Agent**: Automates multi-model training (RandomForest, GradientBoosting, LogisticRegression with standard scaling), evaluates generalization/overfitting gaps, and identifies top predictive features.
-5. **Visualization Agent**: Generates publication-ready correlation heatmaps, feature importance plots, and distributions.
-6. **Critic / Validation Agent**: Performs empirical verification checks (sample-size adequacy, overfitting gap tolerance, EDA vs. ML feature consistency) and calculates a quantitative **Evidence Confidence Score (0–100%)**. Can trigger an automatic LangGraph retry loop if anomalies are detected.
-7. **Insight Agent**: Synthesizes verified facts into an executive summary, ranks business recommendations, and exports professional **PDF** (`reports/executive_report.pdf`) and **HTML** reports.
+1. **Orchestrator Agent**: Decomposes analytical goals into dynamic task sequences using LLMs (Google Gemini / Anthropic) with offline fallback.
+2. **Data Agent**: Inspects schemas, missing value distributions, cardinalities, cleans data, checks for target leakage, and drops suspect columns (`drop_columns`).
+3. **EDA / Statistics Agent**: Tests associations with Benjamini-Hochberg FDR correction, evaluates rank correlations, and measures segment rates.
+4. **Machine Learning Agent**: Automates model cross-validation on train splits, held-out test scoring, baseline comparison, and permutation feature importance.
+5. **Visualization Agent**: Generates publication-ready correlation heatmaps, feature importance plots, and outcome distribution charts.
+6. **Insight Agent**: Synthesizes verified claims and actionable recommendations backed strictly by cited evidence IDs.
+7. **Critic / Validation Agent**: Programmatically audits target leakage, overfitting gaps, sample sizes, and CV stability; calculates a 100-point **Confidence Rubric** score, and triggers backward retry loops on blockers.
+
+### Core Architectural Invariant
+> **A number may only appear in a report if a deterministic tool computed it and the Evidence Ledger recorded it.**
 
 ---
 
@@ -37,12 +40,16 @@ An autonomous, verifiable multi-agent data scientist system built on **LangGraph
        └───────────────┼───────────────────────┘               │
                        ▼                                       │
             ┌─────────────────────┐                            │
-            │    Critic Agent     │ ── [needs_revision] ───────┘ (Retry loop to EDA)
+            │    Insight Agent    │ ── (Writes Claims)         │
+            └──────────┬──────────┘                            │
+                       ▼                                       │
+            ┌─────────────────────┐                            │
+            │  Critic/Validation  │ ── [needs_revision] ───────┘ (Re-plan / retry to target)
             └──────────┬──────────┘
                        │ [pass]
                        ▼
             ┌─────────────────────┐
-            │    Insight Agent    │ ──→ Executive PDF & HTML Reports
+            │   Executive Report  │ ──→ HTML, Markdown & Evidence Ledger
             └─────────────────────┘
 ```
 
@@ -56,79 +63,80 @@ An autonomous, verifiable multi-agent data scientist system built on **LangGraph
 git clone https://github.com/ektasaini-675/agentic-ai-data-scientist.git
 cd agentic-ai-data-scientist
 
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-*(Optional)* Configure LLM planner via `.env`:
+### 2. Configure LLM Key (Free Google Gemini)
+Copy `.env.example` to `.env` and insert your Gemini API key (from [Google AI Studio](https://aistudio.google.com)):
 ```bash
 cp .env.example .env
-# Set ANTHROPIC_API_KEY=your_key_here
-# Set USE_LLM_ORCHESTRATOR=1
+# Edit .env:
+# GEMINI_API_KEY=your_gemini_key_here
+# ADS_MODEL=gemini-3.5-flash
 ```
-*Note: The system works completely offline without any API keys required using the built-in heuristic/rule-based engine!*
+*Note: The system also functions completely offline without any API keys required using deterministic scripted policies!*
+
+### 3. Verify System Health
+```bash
+# Run unit & integration test suite (56 tests)
+pytest
+
+# Smoke test every tool across all benchmark datasets
+python scripts/smoke_tools.py
+
+# Verify live Gemini LLM connection and tool calling
+python scripts/check_llm.py
+```
 
 ---
 
-### 2. Run the Interactive Streamlit Web UI
-Launch the interactive dashboard to run analyses, inspect real-time agent traces, and download executive reports:
+## 💻 Running the System
+
+### A. Interactive Streamlit Web UI
+Launch the interactive dashboard to upload custom CSVs, monitor real-time agent execution traces, browse the Evidence Ledger, view charts, and download reports:
 ```bash
 streamlit run app.py
 ```
 Open [http://localhost:8501](http://localhost:8501) in your browser.
 
----
-
-### 3. Run via Command Line Interface (CLI)
-You can directly execute the LangGraph pipeline on any dataset:
+### B. Command Line Interface (CLI)
+Run the full multi-agent pipeline on any dataset:
 ```bash
-# Breast cancer sample dataset
-python graph.py datasets/raw/sample.csv "predict whether the tumor is malignant based on measurements"
-
-# Telco customer churn dataset
-python graph.py datasets/raw/telco_churn.csv "predict customer churn and explain key retention drivers"
+python -m ads.cli datasets/raw/sample.csv "predict diagnosis and explain key factors"
+python -m ads.cli datasets/raw/telco_churn.csv "identify factors affecting customer churn"
 ```
 
----
-
-### 4. Run the Ablation Study
-Measure the empirical impact of the Critic Agent with our automated ablation script:
+### C. Academic Benchmark Evaluation
+Run the comprehensive 10-case benchmark (B1 Single-Prompt vs. B2 Ablated vs. B3 Full System) measuring flaw detection, number grounding rates, and self-correction:
 ```bash
-python evaluation/ablation_study.py datasets/raw/sample.csv "predict whether the tumor is malignant"
+python evaluation/benchmark.py
 ```
-Outputs a comparison table evaluating execution time, validation passes, confidence scores, and saves `evaluation/results/ablation_results.json`.
+Results and analysis are recorded in `docs/evaluation.md`.
 
 ---
 
 ## 📁 Repository Structure
 ```
 agentic-ai-data-scientist/
-├── agents/                  # Specialized autonomous agents
-│   ├── state.py             # Shared TypedDict state schema
-│   ├── orchestrator.py      # Rule-based task planner & router
-│   ├── orchestrator_llm.py  # LLM-based task planner (Claude)
-│   ├── data_agent.py        # Schema detection & data hygiene
-│   ├── eda_agent.py         # Correlation, distribution & statistical tests
-│   ├── ml_agent.py          # Multi-model evaluation & feature ranking
-│   ├── viz_agent.py         # Automated chart generation (Matplotlib/Plotly)
-│   ├── critic_agent.py      # Overfitting, sample size & confidence scoring
-│   └── insight_agent.py     # Executive report builder & PDF/HTML exporter
-├── datasets/                # Benchmark & raw datasets
-│   └── raw/
-│       ├── sample.csv       # Breast cancer diagnostic dataset (569 rows)
-│       └── telco_churn.csv  # Telco customer churn dataset (7,043 rows)
-├── evaluation/              # Evaluation & empirical benchmarking
-│   ├── baseline_comparison.py # Multi-agent vs single-prompt LLM baseline
-│   └── ablation_study.py    # With-Critic vs. Without-Critic ablation study
-├── reports/                 # Auto-generated outputs (PDF, HTML, charts)
-├── docs/                    # Weekly project logs & architecture records
+├── ads/                     # Core multi-agent package
+│   ├── agents/              # Specialist agents (orchestrator, data, eda, ml, viz, insight, critic)
+│   ├── llm/                 # Unified LLM client (Gemini/Anthropic), cache, agent loop
+│   ├── tools/               # Deterministic statistical, data, ML, and viz tools
+│   ├── report/              # Executive report renderer (HTML/Markdown + audit appendix)
+│   ├── context.py           # RunContext & per-run directory management
+│   ├── ledger.py            # Append-only Evidence Ledger
+│   ├── state.py             # Shared contracts (Evidence, Claim, Feedback, AgentState)
+│   ├── verify.py            # Claim verifier (anti-hallucination guard)
+│   ├── pipeline.py          # End-to-end pipeline executor
+│   └── cli.py               # Command-line entry point
+├── datasets/raw/            # Benchmark datasets (sample, telco_churn, heart_disease, loan_approval)
+├── docs/                    # Architecture, evaluation benchmark, and handover specs
+├── evaluation/              # Benchmark suites and comparative studies
+├── scripts/                 # check_llm.py, smoke_tools.py
+├── tests/                   # Pytest test suite (56 tests)
 ├── app.py                   # Streamlit web application & live dashboard
-├── graph.py                 # LangGraph StateGraph pipeline definition
-└── requirements.txt         # Project dependencies
+└── README.md                # Project documentation
 ```
 
 ---

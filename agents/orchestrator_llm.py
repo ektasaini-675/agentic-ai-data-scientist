@@ -37,28 +37,29 @@ Respond with ONLY a JSON array of agent names, nothing else. Example:
 
 
 def plan_tasks_llm(state: AgentState) -> AgentState:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
+    try:
+        from ads.llm import LLMClient
+        client = LLMClient()
+    except Exception:
+        client = None
+
+    if not client or not client.available:
         # graceful fallback -- lets the rest of the team keep working without a key
         state.setdefault("agent_trace", []).append(
-            "[orchestrator] no ANTHROPIC_API_KEY set, falling back to rule-based planner"
+            "[orchestrator] no LLM API key set, falling back to rule-based planner"
         )
         return plan_tasks_rule_based(state)
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-
         columns = list(pd.read_csv(state["dataset_path"], nrows=5).columns)
         user_msg = f"User goal: {state['user_goal']}\nDataset columns: {columns}"
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=200,
+        response = client.complete(
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
+            max_tokens=200,
         )
-        raw = response.content[0].text.strip()
+        raw = response.text.strip()
         raw = raw.replace("```json", "").replace("```", "").strip()
         plan = json.loads(raw)
 
