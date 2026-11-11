@@ -1,6 +1,6 @@
 """
-Automated Unit and Integration Test Suite for the Autonomous Multi-Agent AI System.
-Built using standard Python unittest framework (Zero External Dependencies).
+Comprehensive Automated Unit and Integration Test Suite for the Autonomous Multi-Agent AI System.
+Built using standard Python unittest framework.
 
 Run via:
     cmd.exe /c run.bat tests/test_system.py
@@ -21,9 +21,14 @@ from agents import (
     ml_agent,
     viz_agent,
     critic_agent,
-    insight_agent
+    insight_agent,
+    code_interpreter_agent
 )
 from graph import build_graph
+from models.inference_engine import InferenceEngine
+from tools.code_sandbox import CodeSandbox
+from starlette.testclient import TestClient
+from api import app as api_app
 
 
 class TestMultiAgentSystem(unittest.TestCase):
@@ -73,7 +78,6 @@ class TestMultiAgentSystem(unittest.TestCase):
         self.assertIn("normality_tests", eda)
         hyp_tests = res.get("hypothesis_tests", [])
         self.assertGreater(len(hyp_tests), 0)
-        # Check first test structure
         t0 = hyp_tests[0]
         self.assertIn("p_value", t0)
         self.assertIn("effect_size", t0)
@@ -95,7 +99,6 @@ class TestMultiAgentSystem(unittest.TestCase):
         self.assertIn("overfit_gap", m_rep)
         top_f = res.get("top_features", [])
         self.assertGreater(len(top_f), 0)
-        # Check directional impact
         self.assertIn("impact_direction", top_f[0])
 
     def test_05_critic_4pillar_audit(self):
@@ -141,6 +144,49 @@ class TestMultiAgentSystem(unittest.TestCase):
         self.assertIn("Evidence Confidence Score", final_state["final_report"])
         self.assertTrue(os.path.exists(final_state.get("report_pdf_path", "")))
         self.assertTrue(os.path.exists(final_state.get("report_html_path", "")))
+
+    def test_08_inference_engine_and_counterfactuals(self):
+        engine = InferenceEngine()
+        self.assertTrue(engine.is_ready(), "Inference engine should have serialized model artifact ready.")
+        test_inputs = {feat: 1.0 for feat in engine.feature_names}
+        res = engine.predict_one(test_inputs)
+        self.assertIn("prediction", res)
+        self.assertIn("probabilities", res)
+        self.assertIn("confidence", res)
+        
+        # Test sensitivity
+        cf = engine.counterfactual_sensitivity(test_inputs, top_k=3)
+        self.assertGreaterEqual(len(cf), 1)
+        self.assertIn("sensitivity_magnitude", cf[0])
+
+    def test_09_code_interpreter_and_sandbox(self):
+        sb = CodeSandbox(timeout_seconds=5)
+        exec_res = sb.execute_code("print('SANDBOX_TEST_SUCCESS')")
+        self.assertTrue(exec_res["success"])
+        self.assertIn("SANDBOX_TEST_SUCCESS", exec_res["stdout"])
+
+        state: AgentState = {"dataset_path": self.sample_path, "user_goal": "check missing values", "agent_trace": []}
+        ci_res = code_interpreter_agent.run_code_interpreter(state)
+        self.assertTrue(ci_res["success"])
+        self.assertIn("DATASET SHAPE", ci_res["stdout"])
+
+    def test_10_rest_api_endpoints(self):
+        client = TestClient(api_app)
+        resp = client.get("/health")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "healthy")
+        self.assertTrue(data["model_artifact_loaded"])
+
+        # Test root endpoint
+        root_resp = client.get("/")
+        self.assertEqual(root_resp.status_code, 200)
+        self.assertIn("text/html", root_resp.headers["content-type"])
+
+        # Test predict endpoint
+        pred_resp = client.post("/predict", json={"features": {"mean radius": 14.0}})
+        self.assertEqual(pred_resp.status_code, 200)
+        self.assertIn("prediction", pred_resp.json())
 
 
 if __name__ == "__main__":

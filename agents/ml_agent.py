@@ -4,6 +4,7 @@ Performs automated multi-model benchmarking, 5-Fold Stratified Cross-Validation,
 class imbalance mitigation, Explainable AI (XAI) feature attribution with directional impact,
 and adaptive regularization remediation in response to Critic Agent directives.
 """
+import os
 import re
 import numpy as np
 import pandas as pd
@@ -236,6 +237,29 @@ def run(state: AgentState) -> AgentState:
             top_features_list = top_features_list[:10]
 
         best_meta = next(m for m in leaderboard if m["name"] == best_model_name)
+        
+        # Serialize Model Artifact for Standalone Deployment
+        os.makedirs("models", exist_ok=True)
+        model_artifact_path = "models/best_model.joblib"
+        try:
+            import joblib
+            artifact = {
+                "model_name": best_model_name,
+                "model": best_fitted_model,
+                "problem_type": "classification",
+                "target_column": target_col,
+                "feature_names": feature_names,
+                "scaler": scaler if best_model_name == "LogisticRegression" else None,
+                "classes_map": classes_map,
+                "test_accuracy": best_meta["test_accuracy"],
+                "cv_accuracy": f"{best_meta['cv_5fold_mean']} ± {best_meta['cv_5fold_std']}",
+                "top_features": top_features_list
+            }
+            joblib.dump(artifact, model_artifact_path)
+            state["model_artifact_path"] = model_artifact_path
+        except Exception:
+            pass
+
         state["model_report"] = {
             "target_column": target_col,
             "problem_type": "classification",
@@ -252,7 +276,8 @@ def run(state: AgentState) -> AgentState:
             "train_size": len(X_train),
             "test_size": len(X_test),
             "classes_map": classes_map,
-            "is_regularized": regularize_flag
+            "is_regularized": regularize_flag,
+            "artifact_path": model_artifact_path
         }
         state["models_evaluated"] = leaderboard
         state["top_features"] = top_features_list
@@ -318,6 +343,28 @@ def run(state: AgentState) -> AgentState:
             top_features_list = top_features_list[:10]
 
         best_meta = next(m for m in reg_leaderboard if m["name"] == best_reg_name)
+        
+        # Serialize Model Artifact for Standalone Deployment
+        os.makedirs("models", exist_ok=True)
+        model_artifact_path = "models/best_model.joblib"
+        try:
+            import joblib
+            artifact = {
+                "model_name": best_reg_name,
+                "model": best_reg_model,
+                "problem_type": "regression",
+                "target_column": target_col,
+                "feature_names": feature_names,
+                "scaler": None,
+                "r2_score": best_meta["r2_score"],
+                "cv_r2": f"{best_meta['cv_5fold_mean_r2']}",
+                "top_features": top_features_list
+            }
+            joblib.dump(artifact, model_artifact_path)
+            state["model_artifact_path"] = model_artifact_path
+        except Exception:
+            pass
+
         state["model_report"] = {
             "target_column": target_col,
             "problem_type": "regression",
@@ -332,7 +379,8 @@ def run(state: AgentState) -> AgentState:
             "top_features": [(f["feature"], f["importance"]) for f in top_features_list],
             "train_size": len(X_train),
             "test_size": len(X_test),
-            "is_regularized": regularize_flag
+            "is_regularized": regularize_flag,
+            "artifact_path": model_artifact_path
         }
         state["models_evaluated"] = reg_leaderboard
         state["top_features"] = top_features_list

@@ -355,3 +355,4 @@ Second, all transformations—including categorical one-hot encoding, target lab
 ### Q6: What is the significance of including Cohen's $d$ and Cramér's $V$ alongside p-values?
 **Model Answer:**  
 *"In contemporary statistical literature (e.g., American Statistical Association guidelines), relying solely on p-values is widely criticized because in large sample sizes, trivial differences can achieve statistical significance ($p < 0.05$). By reporting standardized effect sizes—Cohen's $d$ for continuous differences and Cramér's $V$ for categorical associations—we quantify the practical magnitude of the effect ($|d| \ge 0.8$ representing large practical importance), ensuring our recommendations are both statistically significant and practically meaningful."*
+

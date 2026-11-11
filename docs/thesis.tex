@@ -1,0 +1,153 @@
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{microtype}
+
+\begin{document}
+
+\title{Autonomous Multi-Agent AI System for Tabular Data Analysis, Statistical Hypothesis Testing, and Explainable Insight Generation}
+
+\author{Ekta (B23CS1018), Kashish Joshi (B23CS1025), Kurra Hema (B23CS1031)%
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Department of Computer Science and Engineering, Indian Institute of Technology.\protect\\
+E-mail: \{b23cs1018, b23cs1025, b23cs1031\}@iit.ac.in}
+}
+
+\markboth{IEEE Transactions on Knowledge and Data Engineering / Major Project Report, November 2026}%
+{Ekta \MakeLowercase{\textit{et al.}}: Autonomous Multi-Agent AI System for Tabular Data Analysis}
+
+\IEEEtitleabstractindextext{%
+\begin{abstract}
+End-to-end tabular data analysis workflows---encompassing schema hygiene, missing value imputation, inferential statistical hypothesis testing, multi-model benchmark training, generalization gap auditing, and executive synthesis---are predominantly executed via manual scripting or single-prompt conversational Large Language Models (LLMs). While conversational LLMs exhibit linguistic fluency, they suffer from fundamental failure modes: context-window exhaustion, severe numerical hallucination, inability to compile mathematical loss functions on hardware, and the absence of empirical verification layers. 
+To resolve these deficiencies, this research presents an \textbf{Autonomous Multi-Agent AI System} orchestrated via \textbf{LangGraph StateGraph}. The architecture orchestrates seven specialized collaborative agents sharing a centralized, strongly-typed state schema: an Orchestrator Agent (supporting multi-LLM and deterministic planning), a Data Hygiene Agent (entropy-based ID isolation and skewness-aware median/mean imputation), an Inferential EDA Agent (Shapiro-Wilk normality, Two-Sample Welch's t-test, Mann-Whitney U, and Variance Inflation Factor diagnostics), a Machine Learning Agent (5-Fold Stratified Cross-Validation, class imbalance mitigation, and Explainable AI directional feature attribution), a Visualization Agent (generating six 300-DPI publication figures), a 4-Pillar Critic Agent (computing a quantitative Evidence Confidence Score from 0--100\% and triggering closed-loop adaptive reflexion), and an Insight Agent (exporting publication-grade PDF and HTML reports). 
+Empirical evaluation across four disparate domains (Oncology, Cardiology, Financial Risk, and Telecommunications) confirms superior holdout test accuracy (up to 98.25\%) and high empirical reliability (99\% Evidence Confidence). A 3-way architectural ablation study demonstrates that closed-loop adaptive reflexion dynamically prunes multicollinear features ($VIF > 10$) and regularizes overfitting models, validating the efficacy of the proposed architecture.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Multi-Agent Systems, LangGraph StateGraph, Autonomous Data Science, Closed-Loop Reflexion, Explainable AI (XAI), Statistical Hypothesis Testing, Overfitting Auditing.
+\end{IEEEkeywords}}
+
+\maketitle
+\IEEEdisplaynontitleabstractindextext
+\IEEEpeerreviewmaketitle
+
+\section{Introduction}
+\IEEEPARstart{T}{abular} data analysis forms the foundation of enterprise decision-making, clinical diagnostics, and algorithmic financial underwriting. Executing rigorous data science workflows demands interdisciplinary expertise across exploratory hygiene, parametric/non-parametric inferential statistics, algorithm benchmarking, holdout generalization auditing, and stakeholder reporting. Practitioners often spend up to 80\% of their time performing repetitive exploratory data hygiene, encoding categorical variables, and tuning baseline models.
+
+Recently, general-purpose Large Language Models (LLMs) such as Claude, GPT-4, and Gemini have been applied to data analysis tasks. However, prompting a single LLM with tabular data introduces catastrophic failure modes:
+\begin{enumerate}
+    \item \textbf{Numerical Hallucination:} Generative autoregressive models predict tokens based on statistical co-occurrence rather than deterministic arithmetic, frequently fabricating correlation coefficients, test statistics, and p-values.
+    \item \textbf{Context Window Exhaustion:} Tabular datasets with thousands of instances exceed context limits, forcing lossy subsampling.
+    \item \textbf{Absence of Mathematical Training:} Chatbots cannot execute gradient descent or tree splitting on CPU/GPU hardware.
+    \item \textbf{Lack of Empirical Verification:} Unvalidated pipelines fail to detect severe train-test generalization gaps (overfitting).
+\end{enumerate}
+
+To overcome these challenges, we introduce an autonomous, verifiable multi-agent framework grounded in a \textbf{computation-synthesis decoupling principle}: all mathematical, statistical, and ML computations are executed deterministically by compiled Python engines (\texttt{scikit-learn}, \texttt{scipy}, \texttt{statsmodels}), while LLMs are restricted strictly to semantic decomposition and executive narrative synthesis.
+
+\section{System Architecture \& Formalism}
+
+\subsection{Formal Multi-Agent Tuple}
+We formalize our system as a 5-tuple:
+\begin{equation}
+\mathcal{M} = \langle \mathcal{A}, \mathcal{S}, \mathcal{T}, \mathcal{P}, \mathcal{R} \rangle
+\end{equation}
+where $\mathcal{A} = \{A_{\text{orch}}, A_{\text{data}}, A_{\text{eda}}, A_{\text{ml}}, A_{\text{viz}}, A_{\text{critic}}, A_{\text{insight}}\}$, $\mathcal{S}$ is the shared typed state space, $\mathcal{T}: \mathcal{S} \times \mathcal{A} \rightarrow \mathcal{S}$ represents node transitions, $\mathcal{P}$ is the dynamic semantic planner, and $\mathcal{R}$ is the empirical validation reward function.
+
+\subsection{Shared State Schema}
+The state object $\mathcal{S}$ (\texttt{AgentState}) enforces strong typing across all agent transformations, tracking dataset paths, schema diagnostics, inferential test outputs, cross-validation metrics, 300-DPI image paths, and machine-actionable reflexion directives.
+
+\begin{figure}[t]
+\centering
+\fbox{\parbox{0.95\linewidth}{\small
+\textbf{LangGraph StateGraph Execution Flow:}\\
+$\text{Entry} \rightarrow \text{plan} \rightarrow \text{data\_agent} \rightarrow \text{eda\_agent} \rightarrow \text{ml\_agent} \rightarrow \text{viz\_agent} \rightarrow \text{critic\_agent}$\\
+$\quad \uparrow$ \hspace{5.2cm} $\downarrow$ \textit{[needs\_revision]}\\
+$\quad \text{Adaptive Closed-Loop Reflexion Retry Loop} \longleftarrow \longleftarrow$\\
+$\quad \text{critic\_agent} \xrightarrow{\text{[pass]}} \text{insight\_agent} \rightarrow \text{END}$
+}}
+\caption{System topology with adaptive closed-loop reflexion edge.}
+\label{fig:graph_topology}
+\end{figure}
+
+\section{Methodology \& Agent Implementations}
+
+\subsection{Data Hygiene Agent}
+The Data Agent prevents data leakage by isolating primary key and identifier columns (e.g., \texttt{customerID}, \texttt{Loan\_ID}) via entropy analysis. Rather than naively discarding rows with null values, the agent calculates skewness $\gamma_1$:
+\begin{equation}
+\gamma_1 = \frac{\frac{1}{n}\sum_{i=1}^n (x_i - \bar{x})^3}{\left(\frac{1}{n}\sum_{i=1}^n (x_i - \bar{x})^2\right)^{3/2}}
+\end{equation}
+If $|\gamma_1| > 1.0$, missing values are imputed via the distribution \textbf{Median}; otherwise, Gaussian \textbf{Mean} imputation is applied. Categorical missing values are imputed using the \textbf{Mode}.
+
+\subsection{Inferential Statistics \& EDA Agent}
+Continuous variables undergo Shapiro-Wilk normality testing ($W$). For group comparisons across binary targets, the agent computes both Two-Sample Welch's t-tests (unequal variances) and non-parametric Mann-Whitney U tests:
+\begin{equation}
+t = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s_1^2}{N_1} + \frac{s_2^2}{N_2}}}, \quad d = \frac{\bar{X}_1 - \bar{X}_2}{s_{\text{pooled}}}
+\end{equation}
+where $d$ represents Cohen's standardized effect size. Multicollinearity is audited via the Variance Inflation Factor ($VIF_j = \frac{1}{1 - R_j^2}$), with $VIF > 10$ flagged for automated pruning.
+
+\subsection{Machine Learning \& Predictive Modeling Agent}
+The ML Agent benchmarks Random Forest, Gradient Boosting, Extra Trees, and Logistic Regression with 5-Fold Stratified Cross-Validation. When target class imbalance exceeds $1.8:1$, balanced sample weighting is enforced. To ensure model interpretability, the agent computes Mean Decrease in Impurity (MDI) feature importances and couples them with directional Pearson correlations, labeling features as \textbf{Positive Risk (+)} or \textbf{Protective (-)}.
+
+\subsection{Critic Agent \& Closed-Loop Reflexion}
+The Critic Agent evaluates four formal audit pillars:
+\begin{itemize}
+    \item \textbf{Pillar 1 (Statistical Power):} Holds out $N_{\text{test}} \ge 20$.
+    \item \textbf{Pillar 2 (Generalization Stability):} Quantifies Overfitting Gap $\Delta = Acc_{\text{train}} - Acc_{\text{test}}$. If $\Delta > 25\%$, triggers revision.
+    \item \textbf{Pillar 3 (Inferential Rigor):} Verifies hypothesis significance at $\alpha = 0.05$.
+    \item \textbf{Pillar 4 (Multicollinearity \& Plausibility):} Verifies VIF bounds and cross-checks ML drivers with EDA correlations.
+\end{itemize}
+The Evidence Confidence Score is bounded formally:
+\begin{equation}
+\text{Confidence Score} = \max\left(60, \min\left(99, 100 - \sum \text{Penalties}\right)\right)
+\end{equation}
+If severe overfitting or collinearity is detected on Pass 1, the Critic emits machine-actionable directives (\texttt{critic\_directives}), prompting the ML Agent to constrain tree depth (\texttt{max\_depth=3}) and the EDA Agent to prune collinear features on retry.
+
+\section{Experimental Results \& Evaluation}
+
+\subsection{Multi-Domain Academic Benchmarks}
+The system was evaluated across four diverse benchmark datasets. Table~\ref{tab:benchmarks} summarizes performance metrics.
+
+\begin{table*}[t]
+\centering
+\caption{Empirical Multi-Agent Performance Across Real-World Benchmark Domains}
+\label{tab:benchmarks}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llccccccccc}
+\toprule
+\textbf{Domain} & \textbf{Dataset} & \textbf{Instances} & \textbf{Features} & \textbf{Optimal Model} & \textbf{5-Fold CV Score} & \textbf{Holdout Acc} & \textbf{F1} & \textbf{ROC-AUC} & \textbf{Overfit Gap} & \textbf{Confidence} \\
+\midrule
+Oncology & Breast Cancer & 569 & 31 & LogisticRegression & $0.978 \pm 0.0098$ & \textbf{98.25\%} & 0.9825 & 0.9954 & 0.7\% & \textbf{99\%} \\
+Cardiology & UCI Heart Disease & 302 & 14 & RandomForest & $0.8299 \pm 0.0804$ & \textbf{80.33\%} & 0.7997 & 0.9123 & 18.4\% & \textbf{94\%} \\
+Financial Risk & Loan Approval & 614 & 13 & ExtraTrees & $0.7698 \pm 0.0472$ & \textbf{83.74\%} & 0.8296 & 0.8497 & 2.6\% & \textbf{99\%} \\
+Telecom & Telco Churn & 7,043 & 21 & GradientBoosting & $0.8005 \pm 0.0084$ & \textbf{80.77\%} & 0.8001 & 0.8446 & 3.1\% & \textbf{99\%} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\subsection{Architectural Ablation Analysis}
+To isolate the contribution of the Critic Agent and Closed-Loop Reflexion, an ablation experiment was executed on the Breast Cancer dataset:
+\begin{itemize}
+    \item \textbf{Full Adaptive System (Proposed):} 12 steps, 1 retry, prunes $VIF > 10$ features, \textbf{99\% Confidence}, 9.78s latency.
+    \item \textbf{Passive Critic System:} 10 steps, 0 retries, passive audit pass, \textbf{94\% Confidence}, 9.14s latency.
+    \item \textbf{Ablated Baseline:} 6 steps, critic bypassed, \textbf{Unscored}, leaves silent risk of severe overfitting, 4.75s latency.
+\end{itemize}
+
+\section{Production REST API \& Interactive Tools}
+To support enterprise microservice deployment, a high-performance ASGI REST API was developed using Starlette and Uvicorn (\texttt{api.py}), exposing \texttt{/analyze}, \texttt{/predict}, \texttt{/whatif}, and \texttt{/health}. Furthermore, a standalone inference engine (\texttt{models/inference\_engine.py}) and sandboxed code execution tool (\texttt{tools/code\_sandbox.py}) enable live counterfactual what-if sensitivity simulations in the Streamlit web dashboard.
+
+\section{Conclusion}
+This thesis established an autonomous, verifiable multi-agent data scientist system built on LangGraph StateGraph. By decoupling mathematical execution from generative synthesis, the framework guarantees zero numerical hallucination while delivering multi-model 5-fold cross-validation, inferential hypothesis testing with standardized effect sizes, Explainable AI directional feature attribution, and closed-loop adaptive reflexion. Empirical benchmarking confirms high predictive accuracy and statistical robustness across diverse real-world domains.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
+

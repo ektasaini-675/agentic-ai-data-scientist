@@ -21,6 +21,7 @@ from PIL import Image
 
 from graph import build_graph
 from agents.state import AgentState
+from models.inference_engine import InferenceEngine
 
 # ---------------------------------------------------------
 # Page Configuration & Professional Academic Styling
@@ -343,9 +344,11 @@ if final_state:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # In-Depth Tabs
-    tab_report, tab_trace, tab_ml, tab_eda, tab_charts, tab_critic, tab_cleaning, tab_benchmarks, tab_export, tab_defense = st.tabs([
+    tab_report, tab_sim, tab_copilot, tab_trace, tab_ml, tab_eda, tab_charts, tab_critic, tab_cleaning, tab_benchmarks, tab_export, tab_defense = st.tabs([
         "💡 Executive Report",
-        "💬 Live Agent Trace",
+        "🎯 What-If Simulation",
+        "💬 Copilot / Ask Data",
+        "📜 Live Agent Trace",
         "🤖 Predictive ML & CV",
         "📊 Inferential Statistics",
         "📈 Publication Charts",
@@ -374,6 +377,140 @@ if final_state:
                     <div style="font-size: 12px; color: #6ee7b7; margin-top: 4px;"><strong>Expected Business Impact:</strong> {r.get('impact')}</div>
                 </div>
                 """, unsafe_allow_html=True)
+
+    # TAB: WHAT-IF SIMULATION & COUNTERFACTUAL ENGINE
+    with tab_sim:
+        st.markdown("### 🎯 Live Model Inference & What-If Simulation Engine")
+        st.write("Tweak feature inputs below in real-time to observe the predicted class outcome, probability distribution, and counterfactual sensitivity:")
+        
+        inf = InferenceEngine()
+        if inf.is_ready():
+            data_p = final_state.get("cleaned_dataset_path") or final_state.get("dataset_path")
+            data_df = pd.read_csv(data_p) if (data_p and os.path.exists(data_p)) else pd.DataFrame()
+            
+            top_f_items = final_state.get("top_features", [])
+            top_feature_names = [f["feature"] for f in top_f_items[:6]]
+            if not top_feature_names:
+                top_feature_names = inf.feature_names[:6]
+                
+            st.markdown("#### Configure Input Features")
+            cols_input = st.columns(min(3, len(top_feature_names)))
+            user_inputs = {}
+
+            # Populate default values from medians
+            for f in inf.feature_names:
+                if f in data_df.columns and pd.api.types.is_numeric_dtype(data_df[f]):
+                    user_inputs[f] = float(data_df[f].median())
+                else:
+                    user_inputs[f] = 0.0
+
+            for idx, feat in enumerate(top_feature_names):
+                c = cols_input[idx % len(cols_input)]
+                with c:
+                    if feat in data_df.columns and pd.api.types.is_numeric_dtype(data_df[feat]):
+                        f_min = float(data_df[feat].min())
+                        f_max = float(data_df[feat].max())
+                        f_med = float(data_df[feat].median())
+                        if f_min == f_max:
+                            f_max = f_min + 1.0
+                        step = round((f_max - f_min) / 100.0, 3) if f_max > f_min else 0.1
+                        val = st.slider(f"{feat}:", min_value=f_min, max_value=f_max, value=f_med, step=step, key=f"sim_{feat}")
+                        user_inputs[feat] = val
+                    else:
+                        val = st.number_input(f"{feat}:", value=float(user_inputs.get(feat, 0.0)), key=f"sim_num_{feat}")
+                        user_inputs[feat] = val
+
+            st.markdown("---")
+            pred_res = inf.predict_one(user_inputs)
+            st.markdown("#### Live Prediction Outcome")
+            p_c1, p_c2 = st.columns([1, 1.5])
+            with p_c1:
+                pred_label = pred_res.get("prediction")
+                conf_val = pred_res.get("confidence", 1.0)
+                st.markdown(f"""
+                <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid #38bdf8; border-radius: 14px; padding: 20px; text-align: center;">
+                    <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #94a3b8;">Predicted Target Outcome</div>
+                    <div style="font-size: 32px; font-weight: 800; color: #38bdf8; margin: 8px 0;">{pred_label}</div>
+                    <div style="font-size: 14px; color: #22c55e;">Model Confidence: <strong>{conf_val * 100:.1f}%</strong></div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Engine: {pred_res.get('model_name')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with p_c2:
+                probs = pred_res.get("probabilities", {})
+                if probs:
+                    prob_df = pd.DataFrame(list(probs.items()), columns=["Target Class", "Probability"])
+                    fig_p = px.bar(
+                        prob_df,
+                        x="Probability",
+                        y="Target Class",
+                        orientation="h",
+                        title="<b>Output Class Probability Distribution</b>",
+                        color="Probability",
+                        color_continuous_scale="Blues",
+                        range_x=[0, 1]
+                    )
+                    fig_p.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#f8fafc"), height=220)
+                    st.plotly_chart(fig_p, use_container_width=True)
+
+            st.markdown("---")
+            st.markdown("#### 🔍 Counterfactual Sensitivity Analysis (What-If Recourse)")
+            st.caption("Calculates how perturbing each top feature by ±20% shifts the output probability:")
+            cf_list = inf.counterfactual_sensitivity(user_inputs, top_k=min(5, len(top_feature_names)))
+            if cf_list:
+                st.dataframe(pd.DataFrame(cf_list), use_container_width=True)
+        else:
+            st.info("Inference engine model artifact not ready. Run the pipeline first to train and serialize the model.")
+
+    # TAB: COPILOT / ASK DATA
+    with tab_copilot:
+        st.markdown("### 💬 Data Scientist Copilot / Natural Language Inquiries")
+        st.write("Ask any analytical or statistical question regarding the dataset, model, hypothesis tests, or recommendations:")
+        
+        sample_q = st.selectbox(
+            "Suggested Analytical Inquiries:",
+            [
+                "Choose or type a custom question below...",
+                "What is the single most influential predictive feature and why?",
+                "Are any features exhibiting high multicollinearity?",
+                "What was the holdout accuracy and 5-fold cross-validation score?",
+                "What strategic business recommendations do the models support?",
+                "Did the Critic Agent trigger any adaptive closed-loop remediations?"
+            ]
+        )
+        
+        custom_q = st.text_input("Enter your analytical question:", value="" if "Choose" in sample_q else sample_q)
+        
+        if custom_q:
+            q_lower = custom_q.lower()
+            st.markdown("#### 🤖 Copilot Response:")
+            
+            if any(k in q_lower for k in ["influential", "important", "feature", "driver"]):
+                top_f = final_state.get("top_features", [])
+                if top_f:
+                    f0 = top_f[0]
+                    st.success(f"**Top Predictive Feature:** `{f0['feature']}` with relative importance of **{round(f0['importance']*100, 1)}%**. It acts as a **{f0.get('impact_direction', 'Significant Driver')}** relative to target `{model_report.get('target_column')}`.")
+                else:
+                    st.info("Feature importance data is not available.")
+            elif any(k in q_lower for k in ["collinear", "multicollinearity", "vif"]):
+                vifs = final_state.get("vif_report", [])
+                sev = [v for v in vifs if v.get("vif", 0) > 10]
+                if sev:
+                    st.warning(f"**Multicollinearity Warning:** {len(sev)} features exceed VIF threshold of 10: `{[s['feature'] for s in sev[:4]]}`. The Critic Agent flagged these for potential variance inflation.")
+                else:
+                    st.success("**Multicollinearity Status:** All evaluated numeric features exhibit safe Variance Inflation Factor (VIF <= 10) levels.")
+            elif any(k in q_lower for k in ["accuracy", "cv", "score", "f1", "gap"]):
+                st.info(f"**Selected Model:** `{model_report.get('model')}` achieved a holdout test score of **{model_report.get('accuracy')}** and a 5-fold CV score of **{model_report.get('cv_accuracy')}**. The generalization overfitting gap is bounded at **{round(model_report.get('overfit_gap', 0)*100, 1)}%**.")
+            elif any(k in q_lower for k in ["recommend", "action", "strategy"]):
+                recs = final_state.get("recommendations", [])
+                for r in recs:
+                    st.markdown(f"- **[{r['priority']}] {r['title']}**: {r['detail']} *(Impact: {r['impact']})*")
+            elif any(k in q_lower for k in ["critic", "reflexion", "retry", "loop"]):
+                retries = final_state.get("retry_count", 0)
+                status = final_state.get("validation_status")
+                conf = final_state.get("confidence_score")
+                st.info(f"**Critic Status:** `{status.upper()}` with Evidence Confidence Score of **{conf}%**. The system executed **{retries}** adaptive reflexion retry loops.")
+            else:
+                st.markdown(f"**Data Scientist Copilot Findings:** Based on the validated dataset of `{schema.get('n_rows', 0):,}` instances, optimal performance was obtained by `{model_report.get('model')}` with score `{model_report.get('accuracy')}`. Consult the Executive Report tab for in-depth findings.")
 
     # TAB 2: LIVE AGENT TRACE
     with tab_trace:

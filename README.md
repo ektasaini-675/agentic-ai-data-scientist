@@ -23,10 +23,13 @@ An autonomous, verifiable multi-agent data scientist framework built on **LangGr
 1. **Orchestrator Agent**: Decomposes natural language goals into an ordered task graph (supporting both deterministic heuristic planning and Multi-LLM planning via Gemini, Claude, or OpenAI).
 2. **Data Agent**: Automated data hygiene, schema detection, primary key/ID isolation, missing data mechanism diagnostics, and statistical imputation (median/mean/mode).
 3. **EDA & Statistical Agent**: Computes correlation matrices, runs **normality tests (Shapiro-Wilk)**, executes inferential hypothesis tests (**Two-sample Welch's t-test, Mann-Whitney U, One-Way ANOVA, Chi-Square $\chi^2$**), calculates exact effect sizes (**Cohen's $d$, Cramér's $V$**), and evaluates multicollinearity via **Variance Inflation Factor (VIF)**.
-4. **Machine Learning Agent**: Automates multi-model training (Random Forest, Gradient Boosting, Extra Trees, Logistic Regression), runs **5-Fold Stratified Cross-Validation**, handles class imbalance, quantifies generalization/overfitting gaps ($Acc_{\text{train}} - Acc_{\text{test}}$), and computes **Explainable AI (XAI)** feature importance rankings with **Directional Risk Impact (+/-)**.
+4. **Machine Learning Agent**: Automates multi-model training (Random Forest, Gradient Boosting, Extra Trees, Logistic Regression), runs **5-Fold Stratified Cross-Validation**, handles class imbalance, quantifies generalization/overfitting gaps ($Acc_{\text{train}} - Acc_{\text{test}}$), serializes deployment artifacts (`models/best_model.joblib`), and computes **Explainable AI (XAI)** feature importance rankings with **Directional Risk Impact (+/-)**.
 5. **Visualization Agent**: Generates six publication-ready 300-DPI charts (triangular correlation heatmap, XAI feature importance, model generalization comparison, multi-panel density distributions, normalized confusion matrix, and 4-pillar critic radar chart).
 6. **Critic / Validation Agent**: Implements an empirical 4-pillar verification audit (Sample Size & Statistical Power, Overfitting Gap, Inferential Hypothesis Rigor, Multicollinearity/Plausibility) and computes a quantitative **Evidence Confidence Score (0–100%)**. Emits machine-actionable `critic_directives` to trigger an automatic **LangGraph Closed-Loop Reflexion Retry** if anomalies are detected.
 7. **Insight Agent**: Synthesizes verified facts into an executive summary, prioritizes actionable business recommendations, and exports professional **PDF** (`reports/executive_report.pdf`) and **HTML** (`reports/executive_report.html`) reports.
+8. **Real-Time Inference & What-If Simulation Engine (`models/inference_engine.py`)**: Sub-millisecond inference with live class probabilities and counterfactual sensitivity recourse analysis.
+9. **Sandboxed Code Interpreter Agent (`tools/code_sandbox.py`, `agents/code_interpreter_agent.py`)**: Autonomous script generation and execution in a secure subprocess sandbox with automatic exception recovery.
+10. **Production REST API (`api.py`)**: Ultra-high-performance ASGI API built on Starlette and Uvicorn with interactive API documentation.
 
 ---
 
@@ -141,7 +144,13 @@ Outputs consolidated tables, `evaluation/results/benchmark_summary.json`, and La
 cmd.exe /c run.bat evaluation/ablation_study.py datasets/raw/sample.csv "predict whether tumor is malignant"
 ```
 
-### 6. Run Automated Unit & Integration Tests
+### 6. Launch Production REST API
+```bash
+cmd.exe /c run.bat api.py
+```
+Open **`http://localhost:8000`** in your browser for the interactive API documentation and endpoint testing portal.
+
+### 7. Run Automated Test Suite (10 Passing Unit & Integration Tests)
 ```bash
 cmd.exe /c run.bat tests/test_system.py
 ```
@@ -151,6 +160,7 @@ cmd.exe /c run.bat tests/test_system.py
 ## 📁 Repository Structure
 ```
 agentic-ai-data-scientist/
+├── .github/workflows/ci.yml      # CI/CD Automated GitHub Actions Pipeline
 ├── agents/                       # Specialized autonomous agents
 │   ├── state.py                  # Shared TypedDict state schema
 │   ├── orchestrator.py           # Heuristic task planner & state router
@@ -160,7 +170,13 @@ agentic-ai-data-scientist/
 │   ├── ml_agent.py               # 5-fold CV, multi-model benchmark & XAI
 │   ├── viz_agent.py              # 6 publication-grade 300DPI charts
 │   ├── critic_agent.py           # 4-pillar empirical validation & retry loop
-│   └── insight_agent.py          # Executive report builder (PDF, HTML, MD)
+│   ├── insight_agent.py          # Executive report builder (PDF, HTML, MD)
+│   └── code_interpreter_agent.py # Autonomous sandboxed code interpreter
+├── models/                       # Model serialization & inference engine
+│   ├── best_model.joblib         # Serialized optimal model artifact
+│   └── inference_engine.py       # Real-time inference & what-if recourse engine
+├── tools/                        # Agent execution tools & sandboxes
+│   └── code_sandbox.py           # Isolated subprocess code executor
 ├── datasets/raw/                 # Real-world benchmark evaluation datasets
 │   ├── sample.csv                # Breast cancer diagnostic dataset (569 rows)
 │   ├── heart_disease.csv         # UCI heart disease dataset (302 rows)
@@ -172,7 +188,7 @@ agentic-ai-data-scientist/
 │   ├── baseline_comparison.py    # Multi-agent vs single-prompt LLM evaluation
 │   └── results/                  # Stored empirical findings (JSON, MD, LaTeX)
 ├── tests/                        # Automated unit & integration tests
-│   └── test_system.py            # Complete test suite (7 passing tests)
+│   └── test_system.py            # Complete test suite (10/10 passing tests)
 ├── reports/                      # System-generated outputs
 │   ├── executive_report.pdf      # Professional executive PDF report
 │   ├── executive_report.html     # Standalone interactive HTML report
@@ -180,9 +196,12 @@ agentic-ai-data-scientist/
 ├── docs/                         # Academic documentation & thesis
 │   ├── IIT_BTP_FINAL_THESIS_REPORT.md # Comprehensive 60-page caliber BTP thesis
 │   ├── BTP_DEFENSE_PRESENTATION.md    # 30-slide presentation script & viva guide
+│   ├── thesis.tex                # Compilable IEEE/ACM format LaTeX thesis
+│   ├── references.bib            # BibTeX academic citations
 │   ├── PROJECT_UNDERSTANDING_DOCUMENT.md # Technical reference manual
 │   └── weekly_log.md             # Chronological progress logs
-├── app.py                        # Streamlit web application & interactive dashboard
+├── app.py                        # Streamlit research dashboard with What-If simulator
+├── api.py                        # Production ASGI REST API server (Starlette/Uvicorn)
 ├── graph.py                      # LangGraph StateGraph pipeline wiring
 ├── run.bat                       # Universal environment execution runner
 └── requirements.txt              # Production dependency specifications
