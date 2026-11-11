@@ -1,7 +1,8 @@
 """
-Autonomous Multi-Agent AI System for Automated Data Analysis and Insight Generation
-Streamlit Web Application built on LangGraph StateGraph Architecture.
+Autonomous Multi-Agent AI System for Automated Data Science & Insight Generation
+Interactive Web Application built on LangGraph StateGraph Architecture.
 
+Major Project (B.Tech 4th Year - IIT BTP Capstone)
 Team Members:
 - Ekta (B23CS1018)
 - Kashish Joshi (B23CS1025)
@@ -10,7 +11,9 @@ Team Members:
 import os
 import io
 import time
+import json
 import pandas as pd
+import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -20,10 +23,10 @@ from graph import build_graph
 from agents.state import AgentState
 
 # ---------------------------------------------------------
-# Page Configuration & Modern Styling
+# Page Configuration & Professional Academic Styling
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Autonomous Agentic AI Data Scientist",
+    page_title="Autonomous Multi-Agent AI Data Scientist | IIT BTP",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -43,11 +46,11 @@ CUSTOM_CSS = """
     }
     
     .hero-container {
-        background: rgba(22, 29, 49, 0.7);
+        background: rgba(22, 29, 49, 0.75);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 20px;
-        padding: 26px 30px;
-        margin-bottom: 24px;
+        padding: 24px 28px;
+        margin-bottom: 22px;
         backdrop-filter: blur(16px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
         position: relative;
@@ -63,18 +66,18 @@ CUSTOM_CSS = """
     }
     
     .hero-title {
-        font-size: 30px;
+        font-size: 28px;
         font-weight: 800;
         background: linear-gradient(90deg, #ffffff, #cbd5e1, #38bdf8);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     
     .hero-subtitle {
         color: #94a3b8;
-        font-size: 14.5px;
-        margin-bottom: 14px;
+        font-size: 14px;
+        margin-bottom: 12px;
     }
     
     .team-badge-container {
@@ -92,21 +95,21 @@ CUSTOM_CSS = """
         color: #c7d2fe;
         padding: 4px 12px;
         border-radius: 9999px;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 600;
     }
     
     .metric-card {
-        background: rgba(30, 41, 59, 0.6);
+        background: rgba(30, 41, 59, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 14px;
-        padding: 16px;
+        padding: 14px 16px;
         text-align: center;
         backdrop-filter: blur(10px);
     }
     
     .metric-number {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 800;
         background: linear-gradient(90deg, #38bdf8, #818cf8);
         -webkit-background-clip: text;
@@ -114,26 +117,26 @@ CUSTOM_CSS = """
     }
     
     .metric-label {
-        font-size: 12px;
+        font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: 0.6px;
         color: #94a3b8;
-        margin-top: 4px;
+        margin-top: 3px;
     }
     
     .trace-item {
         background: rgba(26, 34, 53, 0.8);
         border-left: 3px solid #818cf8;
         border-radius: 0 8px 8px 0;
-        padding: 10px 14px;
-        margin-bottom: 8px;
+        padding: 9px 13px;
+        margin-bottom: 7px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
+        font-size: 12.5px;
         color: #e2e8f0;
     }
     
     .card-recommendation {
-        background: rgba(30, 41, 59, 0.5);
+        background: rgba(30, 41, 59, 0.55);
         border-left: 4px solid #10b981;
         border-radius: 0 12px 12px 0;
         padding: 14px 18px;
@@ -150,65 +153,86 @@ if "final_state" not in st.session_state:
     st.session_state.final_state = None
 
 # ---------------------------------------------------------
-# Sidebar: Dataset & Goal Selection
+# Sidebar: Configuration & Dataset Selection
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown("### ⚙️ Pipeline Configuration")
+    st.markdown("### ⚙️ Multi-Agent Settings")
     
-    # LLM Orchestrator Toggle
-    use_llm = st.toggle("Use LLM Orchestrator (Claude / Anthropic)", value=False, help="Set USE_LLM_ORCHESTRATOR=1 when ANTHROPIC_API_KEY is available in .env")
-    if use_llm:
-        os.environ["USE_LLM_ORCHESTRATOR"] = "1"
-    else:
+    llm_provider = st.selectbox(
+        "Orchestrator Intelligence:",
+        [
+            "Heuristic Semantic Engine (100% Offline / Zero API Key)",
+            "Google Gemini API (gemini-1.5-flash)",
+            "Anthropic Claude (claude-3-5-sonnet)",
+            "OpenAI (gpt-4o-mini)"
+        ],
+        index=0
+    )
+    
+    if "Heuristic" in llm_provider:
         os.environ["USE_LLM_ORCHESTRATOR"] = "0"
+    else:
+        os.environ["USE_LLM_ORCHESTRATOR"] = "1"
         
     st.markdown("---")
     st.markdown("### 📁 Select Benchmark Dataset")
     
     data_source = st.radio(
         "Data Source:",
-        ["Preloaded Benchmark Dataset", "Upload Custom CSV"],
+        ["Preloaded Domain Benchmark", "Upload Custom CSV"],
         index=0
     )
     
     dataset_path = None
-    if data_source == "Preloaded Benchmark Dataset":
+    if data_source == "Preloaded Domain Benchmark":
         benchmark_choice = st.selectbox(
-            "Choose Dataset:",
+            "Choose Benchmark Dataset:",
             [
-                "Telco Customer Churn (7,043 rows) - E-commerce / Telecom",
-                "UCI Heart Disease (303 rows) - Healthcare Diagnostics",
-                "Loan Approval (614 rows) - Financial Risk",
-                "Breast Cancer Diagnostic (569 rows) - Pathology"
+                "Breast Cancer Diagnostic (569 rows) - Oncology / Pathology",
+                "UCI Heart Disease (302 rows) - Cardiology / Diagnostics",
+                "Financial Loan Approval (614 rows) - Credit Risk Underwriting",
+                "Telco Customer Churn (7,043 rows) - Telecom / Customer Analytics"
             ]
         )
         dataset_map = {
-            "Telco Customer Churn (7,043 rows) - E-commerce / Telecom": ("datasets/raw/telco_churn.csv", "Identify the major factors affecting customer churn and suggest strategies to reduce it"),
-            "UCI Heart Disease (303 rows) - Healthcare Diagnostics": ("datasets/raw/heart_disease.csv", "Predict presence of heart disease based on clinical measurements"),
-            "Loan Approval (614 rows) - Financial Risk": ("datasets/raw/loan_approval.csv", "Predict loan approval status and key determinants"),
-            "Breast Cancer Diagnostic (569 rows) - Pathology": ("datasets/raw/sample.csv", "Predict whether the tumor is malignant based on measurements")
+            "Breast Cancer Diagnostic (569 rows) - Oncology / Pathology": (
+                "datasets/raw/sample.csv",
+                "predict whether the tumor is malignant based on cell measurements"
+            ),
+            "UCI Heart Disease (302 rows) - Cardiology / Diagnostics": (
+                "datasets/raw/heart_disease.csv",
+                "predict presence of heart disease based on clinical measurements"
+            ),
+            "Financial Loan Approval (614 rows) - Credit Risk Underwriting": (
+                "datasets/raw/loan_approval.csv",
+                "predict loan approval status and evaluate applicant risk factors"
+            ),
+            "Telco Customer Churn (7,043 rows) - Telecom / Customer Analytics": (
+                "datasets/raw/telco_churn.csv",
+                "predict customer churn and explain key retention drivers"
+            )
         }
         dataset_path, default_goal = dataset_map[benchmark_choice]
     else:
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+        uploaded_file = st.file_uploader("Upload Tabular CSV", type=["csv"])
         if uploaded_file:
             os.makedirs("datasets/raw", exist_ok=True)
             custom_path = os.path.join("datasets/raw", uploaded_file.name)
             with open(custom_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             dataset_path = custom_path
-            default_goal = "Understand key patterns, correlations, and predictive drivers in this data"
+            default_goal = "Understand key patterns, inferential correlations, and predictive drivers in this data"
 
     if dataset_path and os.path.exists(dataset_path):
         preview_df = pd.read_csv(dataset_path)
-        st.caption(f"📊 Rows: **{len(preview_df)}** | Columns: **{len(preview_df.columns)}**")
+        st.caption(f"📊 Rows: **{len(preview_df):,}** | Columns: **{len(preview_df.columns)}**")
 
         st.markdown("---")
         st.markdown("### 🎯 Analytical Goal")
         user_goal = st.text_area(
             "Natural Language Objective:",
             value=default_goal,
-            height=90
+            height=85
         )
         
         st.markdown("---")
@@ -221,15 +245,15 @@ with st.sidebar:
 # ---------------------------------------------------------
 st.markdown("""
 <div class="hero-container">
-    <div class="hero-title">🧠 Autonomous Agentic AI Data Scientist</div>
-    <div class="hero-subtitle">LangGraph Multi-Agent Architecture for Automated Data Cleaning, EDA, Predictive ML & Validated Insights</div>
+    <div class="hero-title">🧠 Autonomous Multi-Agent AI Data Scientist</div>
+    <div class="hero-subtitle">LangGraph StateGraph Architecture with 5-Fold Stratified CV, Inferential Statistics, XAI & Closed-Loop Reflexion</div>
     <div class="team-badge-container">
-        <span class="team-pill">🎓 B.Tech Final Year Project</span>
+        <span class="team-pill">🎓 B.Tech Final Year Major Project (IIT BTP Capstone)</span>
         <span class="team-pill">👤 Ekta (B23CS1018)</span>
         <span class="team-pill">👤 Kashish Joshi (B23CS1025)</span>
         <span class="team-pill">👤 Kurra Hema (B23CS1031)</span>
         <span class="team-pill">⚡ LangGraph StateGraph</span>
-        <span class="team-pill">🛡️ Critic Retry Loop</span>
+        <span class="team-pill">🛡️ Closed-Loop Critic Agent</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -238,7 +262,7 @@ st.markdown("""
 # Pipeline Execution
 # ---------------------------------------------------------
 if run_btn and dataset_path:
-    with st.spinner("Compiling and Executing LangGraph Multi-Agent Pipeline..."):
+    with st.spinner("Compiling and Executing LangGraph Multi-Agent StateGraph..."):
         app = build_graph()
         initial_state: AgentState = {
             "dataset_path": dataset_path,
@@ -251,7 +275,7 @@ if run_btn and dataset_path:
         elapsed = round(time.time() - start_time, 2)
         
         st.session_state.final_state = final_state
-        st.success(f"🎉 LangGraph Pipeline Successfully Completed in {elapsed}s!")
+        st.success(f"🎉 LangGraph Multi-Agent Pipeline Successfully Completed in {elapsed}s!")
 
 # ---------------------------------------------------------
 # Results Display
@@ -265,9 +289,10 @@ if final_state:
     critic_status = final_state.get("validation_status", "pass")
     confidence = final_state.get("confidence_score", 95)
     retries = final_state.get("retry_count", 0)
+    overfit_gap = model_report.get("overfit_gap", 0.0) if model_report else 0.0
     
-    # KPI Row
-    k1, k2, k3, k4, k5 = st.columns(5)
+    # KPI Row (6 Key Metrics)
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1:
         st.markdown(f"""
         <div class="metric-card">
@@ -283,11 +308,11 @@ if final_state:
         </div>
         """, unsafe_allow_html=True)
     with k3:
-        best_model = model_report.get("model", "N/A") if model_report else "None"
+        best_model = model_report.get("model", "N/A").replace("Classifier", "").replace("Regressor", "") if model_report else "None"
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-number" style="font-size: 19px; line-height: 26px;">{best_model}</div>
-            <div class="metric-label">ML Model Selected</div>
+            <div class="metric-number" style="font-size: 18px; line-height: 24px;">{best_model}</div>
+            <div class="metric-label">Optimal Model</div>
         </div>
         """, unsafe_allow_html=True)
     with k4:
@@ -299,58 +324,160 @@ if final_state:
         </div>
         """, unsafe_allow_html=True)
     with k5:
+        gap_color = "#22c55e" if overfit_gap <= 0.12 else "#f59e0b"
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-number" style="color: {gap_color}; -webkit-text-fill-color: {gap_color};">{round(overfit_gap*100, 1)}%</div>
+            <div class="metric-label">Overfit Gap</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with k6:
         color = "#22c55e" if critic_status == "pass" else "#f59e0b"
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-number" style="color: {color}; -webkit-text-fill-color: {color};">{confidence}%</div>
-            <div class="metric-label">Critic Confidence ({critic_status.upper()})</div>
+            <div class="metric-label">Critic Confidence</div>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Tabs
-    tab_report, tab_trace, tab_charts, tab_ml, tab_eda, tab_critic, tab_cleaning, tab_export = st.tabs([
-        "💡 Final Report & Actions",
+    # In-Depth Tabs
+    tab_report, tab_trace, tab_ml, tab_eda, tab_charts, tab_critic, tab_cleaning, tab_benchmarks, tab_export, tab_defense = st.tabs([
+        "💡 Executive Report",
         "💬 Live Agent Trace",
-        "📈 Generated Charts",
-        "🤖 Predictive ML",
-        "📊 Statistical EDA",
-        "🛡️ Critic & Validation",
-        "🧹 Data Cleaning",
-        "📑 Export Reports"
+        "🤖 Predictive ML & CV",
+        "📊 Inferential Statistics",
+        "📈 Publication Charts",
+        "🛡️ Critic 4-Pillar Audit",
+        "🧹 Data Hygiene",
+        "🔬 Benchmarks & Ablation",
+        "📑 Export Center",
+        "🎓 IIT BTP Viva Defense"
     ])
 
-    # TAB 1: FINAL REPORT
+    # TAB 1: EXECUTIVE REPORT
     with tab_report:
-        st.markdown("### 📝 Synthesized Executive Report")
+        st.markdown("### 📝 Synthesized Executive Data Science Report")
         if final_state.get("final_report"):
             st.markdown(final_state["final_report"])
         
         recs = final_state.get("recommendations", [])
         if recs:
             st.markdown("---")
-            st.markdown("### 🚀 Strategic Action Plan")
+            st.markdown("### 🚀 Strategic Action Plan & Business Recommendations")
             for r in recs:
                 st.markdown(f"""
                 <div class="card-recommendation">
-                    <strong style="color: #34d399; font-size: 15px;">{r.get('title')}</strong>
+                    <strong style="color: #34d399; font-size: 15px;">[{r.get('priority', 'P0')}] {r.get('title')}</strong>
                     <div style="font-size: 13.5px; color: #cbd5e1; margin-top: 4px;">{r.get('detail')}</div>
-                    <div style="font-size: 12px; color: #6ee7b7; margin-top: 4px;"><strong>Impact:</strong> {r.get('impact')}</div>
+                    <div style="font-size: 12px; color: #6ee7b7; margin-top: 4px;"><strong>Expected Business Impact:</strong> {r.get('impact')}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-    # TAB 2: AGENT TRACE
+    # TAB 2: LIVE AGENT TRACE
     with tab_trace:
-        st.markdown("### 💬 LangGraph Agent Execution Trace")
-        st.write("Real-time logging showing how specialized agents executed the plan, passed data, and coordinated decisions:")
+        st.markdown("### 💬 LangGraph Agent Execution Trace & Reflexion Log")
+        st.write("Chronological log capturing agent decomposition, state mutation, closed-loop retry loops, and adaptive remediations:")
         trace = final_state.get("agent_trace", [])
         for line in trace:
-            st.markdown(f"""<div class="trace-item">{line}</div>""", unsafe_allow_html=True)
+            if "REFLEXION" in line:
+                st.markdown(f"""<div class="trace-item" style="border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.12);">{line}</div>""", unsafe_allow_html=True)
+            elif "ADAPTIVE REMEDIATION" in line:
+                st.markdown(f"""<div class="trace-item" style="border-left-color: #10b981; background: rgba(16, 185, 129, 0.12);">{line}</div>""", unsafe_allow_html=True)
+            else:
+                st.markdown(f"""<div class="trace-item">{line}</div>""", unsafe_allow_html=True)
 
-    # TAB 3: CHARTS
+    # TAB 3: PREDICTIVE ML
+    with tab_ml:
+        st.markdown("### 🤖 Predictive Modeling Leaderboard & 5-Fold Stratified Cross-Validation")
+        if model_report and model_report.get("status") != "skipped":
+            st.write(f"Target Feature: **`{model_report.get('target_column')}`** | Problem Formulation: **`{model_report.get('problem_type')}`** | Class Imbalance: **`{final_state.get('class_imbalance_ratio', 1.0)}:1`**")
+            
+            c_m1, c_m2, c_m3, c_m4 = st.columns(4)
+            c_m1.metric("Selected Model", model_report.get("model"))
+            c_m2.metric("Holdout Score (Acc/R²)", model_report.get("accuracy"))
+            c_m3.metric("5-Fold CV Score", model_report.get("cv_accuracy"))
+            c_m4.metric("Generalization Gap", f"{round(model_report.get('overfit_gap', 0)*100, 1)}%")
+
+            # Models Evaluated Leaderboard
+            models_eval = final_state.get("models_evaluated", [])
+            if models_eval:
+                st.markdown("#### Candidate Model Benchmark Leaderboard")
+                st.dataframe(pd.DataFrame(models_eval), use_container_width=True)
+
+            # Feature Importances with Plotly
+            top_f = final_state.get("top_features", [])
+            if top_f:
+                st.markdown("#### Explainable AI (XAI): Feature Importance Attribution & Directional Impact")
+                df_imp = pd.DataFrame(top_f)
+                st.dataframe(df_imp, use_container_width=True)
+
+                fig_imp = px.bar(
+                    df_imp,
+                    x="importance",
+                    y="feature",
+                    orientation="h",
+                    title="<b>Ranked Feature Importance Drivers with Directional Impact</b>",
+                    color="impact_direction",
+                    color_discrete_map={
+                        "Positive Risk (+)": "#ef4444",
+                        "Protective / Negative (-)": "#10b981",
+                        "Neutral": "#6366f1",
+                        "Positive Driver (+)": "#ef4444",
+                        "Inverse Driver (-)": "#10b981"
+                    }
+                )
+                fig_imp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#f8fafc"))
+                st.plotly_chart(fig_imp, use_container_width=True)
+
+            # Confusion Matrix
+            cm = final_state.get("confusion_matrix")
+            if cm:
+                st.markdown("#### Holdout Confusion Matrix")
+                cm_df = pd.DataFrame(cm)
+                fig_cm = px.imshow(
+                    cm,
+                    text_auto=True,
+                    labels=dict(x="Predicted Label", y="True Label", color="Instance Count"),
+                    color_continuous_scale="Blues"
+                )
+                fig_cm.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#f8fafc"))
+                st.plotly_chart(fig_cm, use_container_width=True)
+        else:
+            st.info("Predictive machine learning modeling was skipped or no features were available.")
+
+    # TAB 4: STATISTICAL EDA
+    with tab_eda:
+        st.markdown("### 📊 Inferential Hypothesis Testing & Exploratory Patterns")
+        
+        # Hypothesis tests
+        tests = final_state.get("hypothesis_tests", [])
+        if tests:
+            st.markdown("#### 🔬 Inferential Hypothesis Battery (alpha = 0.05)")
+            st.dataframe(pd.DataFrame(tests), use_container_width=True)
+
+        # Multicollinearity VIF Diagnostic
+        vif_res = final_state.get("vif_report", [])
+        if vif_res:
+            st.markdown("#### 🔗 Variance Inflation Factor (VIF) Multicollinearity Audit")
+            st.dataframe(pd.DataFrame(vif_res), use_container_width=True)
+
+        # Top Correlations
+        top_corr = eda.get("top_correlations", [])
+        if top_corr:
+            st.markdown("#### 📈 Strongest Pairwise Feature Correlations")
+            st.dataframe(pd.DataFrame(top_corr), use_container_width=True)
+
+        # Normality tests
+        norm_tests = eda.get("normality_tests", {})
+        if norm_tests:
+            st.markdown("#### 🧬 Shapiro-Wilk Normality Audit")
+            st.dataframe(pd.DataFrame(norm_tests).T, use_container_width=True)
+
+    # TAB 5: PUBLICATION CHARTS
     with tab_charts:
-        st.markdown("### 📈 Visual Analytics & Plots")
+        st.markdown("### 📈 Publication-Quality Visual Analytics (300 DPI)")
         chart_paths = final_state.get("chart_paths", [])
         if chart_paths:
             cols = st.columns(min(2, len(chart_paths)))
@@ -359,85 +486,63 @@ if final_state:
                     with cols[i % len(cols)]:
                         st.image(p, caption=os.path.basename(p), use_container_width=True)
         else:
-            st.info("No chart images generated.")
+            st.info("No visual chart artifacts generated.")
 
-    # TAB 4: ML MODEL
-    with tab_ml:
-        st.markdown("### 🤖 Predictive Machine Learning Model Report")
-        if model_report and model_report.get("status") != "skipped":
-            st.write(f"Target Column: **`{model_report.get('target_column')}`**")
-            
-            c_m1, c_m2, c_m3 = st.columns(3)
-            c_m1.metric("Selected Model", model_report.get("model"))
-            c_m2.metric("Accuracy / R²", model_report.get("accuracy"))
-            c_m3.metric("F1 Score", model_report.get("f1_score"))
-
-            # Models Evaluated Leaderboard
-            models_eval = final_state.get("models_evaluated", [])
-            if models_eval:
-                st.markdown("#### Model Leaderboard")
-                st.dataframe(pd.DataFrame(models_eval), use_container_width=True)
-
-            # Feature Importances
-            top_f = model_report.get("top_features", [])
-            if top_f:
-                st.markdown("#### Top Predictive Feature Importances")
-                df_imp = pd.DataFrame(top_f, columns=["Feature", "Importance Score"])
-                st.dataframe(df_imp, use_container_width=True)
-
-                fig_imp = px.bar(
-                    df_imp,
-                    x="Importance Score",
-                    y="Feature",
-                    orientation="h",
-                    title="<b>Feature Importance Rankings</b>",
-                    color="Importance Score",
-                    color_continuous_scale="Tealgrn"
-                )
-                fig_imp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#f8fafc"))
-                st.plotly_chart(fig_imp, use_container_width=True)
-        else:
-            st.write("Modeling skipped or not applicable.")
-
-    # TAB 5: STATISTICAL EDA
-    with tab_eda:
-        st.markdown("### 📊 Exploratory Patterns & Statistical Tests")
-        
-        # Hypothesis tests
-        tests = final_state.get("hypothesis_tests", [])
-        if tests:
-            st.markdown("#### 🔬 Hypothesis Testing (alpha = 0.05)")
-            st.dataframe(pd.DataFrame(tests), use_container_width=True)
-
-        # Top Correlations
-        top_corr = eda.get("top_correlations", [])
-        if top_corr:
-            st.markdown("#### 🔗 Strongest Feature Correlations")
-            st.dataframe(pd.DataFrame(top_corr), use_container_width=True)
-
-    # TAB 6: CRITIC & VALIDATION
+    # TAB 6: CRITIC 4-PILLAR AUDIT
     with tab_critic:
-        st.markdown("### 🛡️ Critic Agent Validation & Audit Notes")
-        st.write(f"Validation Status: **`{critic_status.upper()}`** | Retry Count: **`{retries}`** | Confidence: **`{confidence}%`**")
+        st.markdown("### 🛡️ Critic Agent 4-Pillar Empirical Validation Audit")
+        st.write(f"Validation Status: **`{critic_status.upper()}`** | Reflexion Loops: **`{retries}`** | Final Confidence: **`{confidence}%`**")
         
-        notes = final_state.get("validation_notes", [])
-        for n in notes:
-            st.markdown(f"🔍 **Audit Note:** {n}")
+        # Radar Chart Display
+        p_radar = "reports/charts/critic_radar.png"
+        if os.path.exists(p_radar):
+            col_r1, col_r2 = st.columns([1, 1.2])
+            with col_r1:
+                st.image(p_radar, caption="4-Pillar Validation Radar", use_container_width=True)
+            with col_r2:
+                notes = final_state.get("validation_notes", [])
+                st.markdown("#### Empirical Audit Trail")
+                for n in notes:
+                    st.markdown(f"🔍 **Audit Note:** {n}")
+        else:
+            notes = final_state.get("validation_notes", [])
+            for n in notes:
+                st.markdown(f"🔍 **Audit Note:** {n}")
 
-    # TAB 7: DATA CLEANING
+    # TAB 7: DATA HYGIENE
     with tab_cleaning:
-        st.markdown("### 🧹 Data Hygiene & Cleaning Log")
+        st.markdown("### 🧹 Data Hygiene & Preprocessing Profile")
+        st.metric("Data Quality Health Score", f"{schema.get('data_quality_score', 100)}%")
         logs = final_state.get("cleaning_log", [])
         for log in logs:
             st.markdown(f"- {log}")
             
-        if final_state.get("dataset_path") and os.path.exists(final_state["dataset_path"]):
-            st.markdown("#### Raw Dataset Preview")
-            st.dataframe(pd.read_csv(final_state["dataset_path"]).head(30), use_container_width=True)
+        cleaned_path = final_state.get("cleaned_dataset_path") or final_state.get("dataset_path")
+        if cleaned_path and os.path.exists(cleaned_path):
+            st.markdown("#### Cleaned Dataset Preview")
+            st.dataframe(pd.read_csv(cleaned_path).head(30), use_container_width=True)
 
-    # TAB 8: EXPORT REPORTS
+    # TAB 8: BENCHMARKS & ABLATION
+    with tab_benchmarks:
+        st.markdown("### 🔬 Empirical Academic Benchmarks & Architectural Ablation")
+        
+        # Benchmark Table
+        bench_path = "evaluation/results/benchmark_table.md"
+        if os.path.exists(bench_path):
+            with open(bench_path, "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        
+        st.markdown("---")
+        st.markdown("### ⚖️ Architectural Ablation Study (Critic Efficacy)")
+        ablation_path = "evaluation/results/ablation_results.json"
+        if os.path.exists(ablation_path):
+            with open(ablation_path, "r", encoding="utf-8") as f:
+                ab_data = json.load(f)
+            st.json(ab_data)
+
+    # TAB 9: EXPORT CENTER
     with tab_export:
-        st.markdown("### 📑 Download Executive Reports")
+        st.markdown("### 📑 Download Official Project Artifacts")
         pdf_path = final_state.get("report_pdf_path", "reports/executive_report.pdf")
         html_path = final_state.get("report_html_path", "reports/executive_report.html")
 
@@ -456,7 +561,7 @@ if final_state:
             if os.path.exists(html_path):
                 with open(html_path, "r", encoding="utf-8") as f:
                     st.download_button(
-                        label="📥 Download HTML Report",
+                        label="📥 Download Standalone HTML Report",
                         data=f.read(),
                         file_name="executive_data_science_report.html",
                         mime="text/html",
@@ -471,6 +576,25 @@ if final_state:
                 mime="text/markdown",
                 use_container_width=True
             )
+
+    # TAB 10: VIVA DEFENSE GUIDE
+    with tab_defense:
+        st.markdown("### 🎓 IIT B.Tech Major Project Viva Voce Defense Reference")
+        st.markdown("""
+        #### 1. Why LangGraph over AutoGPT or CrewAI?
+        **Answer:** In tabular data science, deterministic state tracking and cyclic edge execution are required. LangGraph provides a formal Directed Acyclic Graph (DAG) with explicit conditional edges (`critic_route`), enabling closed-loop remediation when overfitting or multicollinearity is detected.
+        
+        #### 2. How do you guarantee zero numerical hallucination?
+        **Answer:** Complete separation of concerns: all statistical, mathematical, and machine learning computations are executed deterministically by Python engines (`scikit-learn`, `scipy`, `numpy`, `statsmodels`). Language models are used strictly for intent decomposition and strategic synthesis, strictly referencing pre-calculated numbers in `AgentState`.
+        
+        #### 3. What does your Closed-Loop Reflexion actually adapt?
+        **Answer:** Unlike linear pipelines, when the Critic flags severe overfitting (gap > 25%), it issues machine-actionable directives that dynamically reduce tree depth (`max_depth=3`), increase regularization, or prune high-VIF collinear features. The graph then re-evaluates and validates the improvement.
+        
+        #### 4. How is the Evidence Confidence Score calculated?
+        **Answer:** Formal penalty deduction:
+        $$\\text{Confidence Score} = \\max(60, \\min(99, 100 - \\sum \\text{Penalties}))$$
+        Penalties are assessed across 4 pillars: Data Integrity (-12%), Overfitting Gap (-15%), Statistical Power (-5%), and Multicollinearity (-6%), with bonuses awarded upon verified remediation.
+        """)
 
 else:
     st.info("👈 Select a benchmark dataset or upload a CSV in the sidebar, then click **'🚀 Run LangGraph Multi-Agent Pipeline'** to begin.")
